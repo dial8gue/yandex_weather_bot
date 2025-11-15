@@ -8,6 +8,7 @@ import sys
 
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
 
 from config import Config
 from handlers import router, AccessControlMiddleware
@@ -36,7 +37,10 @@ async def main() -> None:
     logger.info("Конфигурация успешно загружена")
     
     # Инициализация бота и диспетчера
-    bot = Bot(token=Config.TELEGRAM_BOT_TOKEN, parse_mode=ParseMode.HTML)
+    bot = Bot(
+        token=Config.TELEGRAM_BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
     dp = Dispatcher()
     
     # Регистрация middleware для контроля доступа

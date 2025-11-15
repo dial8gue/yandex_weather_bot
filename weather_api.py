@@ -60,8 +60,8 @@ class WeatherAPIClient:
             "lon": lon,
             "lang": "ru_RU",
             "limit": 1,
-            "hours": False,
-            "extra": False
+            "hours": "false",
+            "extra": "false"
         }
         
         try:
