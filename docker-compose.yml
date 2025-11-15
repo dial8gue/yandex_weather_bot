@@ -4,4 +4,6 @@ services:
   bot:
     build: .
     env_file: .env
+    environment:
+      - TZ=Europe/Moscow
     restart: unless-stopped
