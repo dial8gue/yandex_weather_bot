@@ -86,7 +86,7 @@ def format_weather_message(weather_data: dict) -> str:
             
             if feels_like is not None:
                 feels_sign = "+" if feels_like > 0 else ""
-                message_parts.append(f"   Ощущается как: {feels_sign}{feels_like}°C")
+                message_parts.append(f"🤔 Ощущается как: {feels_sign}{feels_like}°C")
         
         # Влажность
         if humidity is not None:
