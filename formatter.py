@@ -1,6 +1,7 @@
 """
 Модуль для форматирования сообщений о погоде
 """
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 # Словарь для перевода условий погоды на русский с эмодзи
@@ -105,3 +106,19 @@ def format_weather_message(weather_data: dict) -> str:
     except Exception as e:
         # Если произошла ошибка при форматировании, возвращаем базовое сообщение
         return "⚠️ Не удалось отформатировать данные о погоде"
+
+
+def create_refresh_keyboard() -> InlineKeyboardMarkup:
+    """
+    Создать inline клавиатуру с кнопкой "Получить новый прогноз"
+    
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопкой обновления прогноза
+    """
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="🔄 Получить новый прогноз",
+            callback_data="refresh_weather"
+        )]
+    ])
+    return keyboard

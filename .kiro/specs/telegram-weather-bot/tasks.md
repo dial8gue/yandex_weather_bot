@@ -116,3 +116,61 @@
   - Добавить инструкцию как получить User ID в Telegram
   - Добавить примеры настройки списка разрешенных пользователей
   - _Requirements: 6.1_
+
+- [x] 10. Реализовать хранилище локаций пользователей
+
+
+
+
+
+- [x] 10.1 Создать модуль для хранения локаций
+
+
+  - Создать user_storage.py с классом UserLocationStorage
+  - Реализовать словарь для хранения локаций пользователей в памяти
+  - Реализовать метод save_location(user_id, latitude, longitude)
+  - Реализовать метод get_location(user_id) -> tuple[float, float] | None
+  - _Requirements: 7.2_
+
+- [x] 11. Добавить интерактивную кнопку "Получить новый прогноз"
+
+
+
+
+
+- [x] 11.1 Создать функцию для генерации inline клавиатуры
+
+
+  - Добавить в formatter.py функцию create_refresh_keyboard()
+  - Использовать InlineKeyboardMarkup и InlineKeyboardButton из aiogram.types
+  - Создать кнопку с текстом "Получить новый прогноз" и callback_data="refresh_weather"
+  - _Requirements: 7.1_
+
+- [x] 11.2 Обновить location_handler для сохранения локации и добавления кнопки
+
+
+  - Импортировать UserLocationStorage в handlers.py
+  - Создать глобальный экземпляр UserLocationStorage
+  - В location_handler сохранять локацию пользователя через storage.save_location()
+  - Добавить inline клавиатуру к сообщению с прогнозом погоды через параметр reply_markup
+  - _Requirements: 7.1, 7.2, 7.4_
+
+- [x] 11.3 Реализовать обработчик callback для кнопки обновления
+
+
+  - Создать async функцию refresh_weather_callback(callback_query: CallbackQuery) в handlers.py
+  - Зарегистрировать обработчик с фильтром callback_data="refresh_weather"
+  - Получить сохраненную локацию пользователя через storage.get_location()
+  - Если локация отсутствует, отправить сообщение с просьбой отправить геолокацию
+  - Если локация есть, запросить актуальный прогноз через WeatherAPIClient
+  - Отредактировать сообщение с новым прогнозом и кнопкой через callback_query.message.edit_text()
+  - Ответить на callback через callback_query.answer() для снятия индикатора загрузки
+  - _Requirements: 7.3, 7.4, 7.5_
+
+- [x] 11.4 Обновить документацию для новой функциональности
+
+
+  - Добавить описание кнопки "Получить новый прогноз" в README.md
+  - Добавить инструкцию по использованию кнопки в раздел "Использование бота"
+  - Обновить пример ответа бота с упоминанием интерактивной кнопки
+  - _Requirements: 7.1_

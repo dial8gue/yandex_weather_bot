@@ -3,19 +3,23 @@
 """
 import logging
 from typing import Callable, Dict, Any, Awaitable
-from aiogram import Router, BaseMiddleware
+from aiogram import Router, BaseMiddleware, F
 from aiogram.filters import Command
-from aiogram.types import Message, TelegramObject
+from aiogram.types import Message, TelegramObject, CallbackQuery
 
 from weather_api import WeatherAPIClient, WeatherAPIError
-from formatter import format_weather_message
+from formatter import format_weather_message, create_refresh_keyboard
 from config import Config
+from user_storage import UserLocationStorage
 
 
 logger = logging.getLogger(__name__)
 
 # Создаем роутер для регистрации обработчиков
 router = Router()
+
+# Создаем глобальный экземпляр хранилища локаций пользователей
+user_location_storage = UserLocationStorage()
 
 
 class AccessControlMiddleware(BaseMiddleware):
@@ -138,12 +142,18 @@ async def location_handler(message: Message) -> None:
         # Получаем данные о погоде
         weather_data = await weather_client.get_weather(lat, lon)
         
+        # Сохраняем локацию пользователя
+        user_location_storage.save_location(user_id, lat, lon)
+        
         # Форматируем сообщение
         weather_message = format_weather_message(weather_data)
         
-        # Удаляем сообщение о загрузке и отправляем результат
+        # Создаем клавиатуру с кнопкой обновления
+        keyboard = create_refresh_keyboard()
+        
+        # Удаляем сообщение о загрузке и отправляем результат с кнопкой
         await processing_message.delete()
-        await message.answer(weather_message)
+        await message.answer(weather_message, reply_markup=keyboard)
         
         logger.info(f"Успешно отправлен прогноз погоды пользователю {user_id}")
     
@@ -165,6 +175,80 @@ async def location_handler(message: Message) -> None:
     except Exception as e:
         logger.error(f"Неожиданная ошибка при обработке геолокации от пользователя {user_id}: {e}", exc_info=True)
         await message.answer("⚠️ Произошла ошибка. Попробуйте еще раз.")
+    
+    finally:
+        # Закрываем клиент Weather API
+        await weather_client.close()
+
+
+
+@router.callback_query(F.data == "refresh_weather")
+async def refresh_weather_callback(callback_query: CallbackQuery) -> None:
+    """
+    Обработчик нажатия кнопки "Получить новый прогноз"
+    Использует сохраненную локацию пользователя для получения актуального прогноза
+    
+    Args:
+        callback_query: Callback запрос от inline кнопки
+    """
+    user_id = callback_query.from_user.id
+    
+    logger.info(f"Запрос обновления прогноза от пользователя {user_id}")
+    
+    # Получаем сохраненную локацию пользователя
+    location = user_location_storage.get_location(user_id)
+    
+    if location is None:
+        # Если локация не сохранена, просим отправить геолокацию
+        await callback_query.answer("📍 Пожалуйста, отправьте свою геолокацию", show_alert=True)
+        await callback_query.message.answer(
+            "📍 Для получения прогноза погоды отправьте мне свою геолокацию.\n\n"
+            "Нажмите на скрепку (📎) в поле ввода и выберите 'Геопозиция'."
+        )
+        return
+    
+    lat, lon = location
+    logger.info(f"Обновление прогноза для пользователя {user_id}: lat={lat}, lon={lon}")
+    
+    # Создаем клиент Weather API
+    weather_client = WeatherAPIClient(Config.YANDEX_WEATHER_API_KEY)
+    
+    try:
+        # Показываем индикатор загрузки
+        await callback_query.answer("🔄 Обновляю прогноз...")
+        
+        # Получаем актуальные данные о погоде
+        weather_data = await weather_client.get_weather(lat, lon)
+        
+        # Форматируем сообщение
+        weather_message = format_weather_message(weather_data)
+        
+        # Создаем клавиатуру с кнопкой обновления
+        keyboard = create_refresh_keyboard()
+        
+        # Редактируем сообщение с новым прогнозом и кнопкой
+        await callback_query.message.edit_text(weather_message, reply_markup=keyboard)
+        
+        logger.info(f"Успешно обновлен прогноз погоды для пользователя {user_id}")
+    
+    except WeatherAPIError as e:
+        logger.error(f"Ошибка Weather API при обновлении для пользователя {user_id}: {e}")
+        
+        # Определяем сообщение об ошибке
+        if "авторизации" in str(e).lower():
+            error_message = "⚠️ Ошибка конфигурации сервиса. Пожалуйста, попробуйте позже."
+        elif "не удалось найти" in str(e).lower() or "не найдена" in str(e).lower():
+            error_message = "⚠️ Не удалось определить погоду для этой локации."
+        elif "недоступен" in str(e).lower() or "время ожидания" in str(e).lower():
+            error_message = "⚠️ Сервис погоды временно недоступен. Попробуйте позже."
+        else:
+            error_message = "⚠️ Произошла ошибка при получении погоды. Попробуйте еще раз."
+        
+        await callback_query.answer(error_message, show_alert=True)
+    
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка при обновлении прогноза для пользователя {user_id}: {e}", exc_info=True)
+        await callback_query.answer("⚠️ Произошла ошибка. Попробуйте еще раз.", show_alert=True)
     
     finally:
         # Закрываем клиент Weather API

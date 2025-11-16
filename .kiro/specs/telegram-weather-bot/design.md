@@ -54,6 +54,14 @@ async def help_command(message: Message) -> None:
 async def location_handler(message: Message) -> None:
     """Обработчик геолокации"""
 
+async def refresh_weather_callback(callback_query: CallbackQuery) -> None:
+    """
+    Обработчик нажатия кнопки "Получить новый прогноз"
+    
+    Использует сохраненную локацию пользователя для получения
+    актуального прогноза погоды
+    """
+
 class AccessControlMiddleware(BaseMiddleware):
     """Middleware для проверки доступа пользователей"""
     
@@ -147,6 +155,37 @@ def format_weather_message(weather_data: dict) -> str:
     """
 ```
 
+### 6. User Location Storage (`user_storage.py`)
+
+Модуль для хранения последних локаций пользователей в памяти.
+
+**Интерфейс:**
+```python
+class UserLocationStorage:
+    """Хранилище последних локаций пользователей"""
+    
+    def save_location(self, user_id: int, latitude: float, longitude: float) -> None:
+        """
+        Сохранить локацию пользователя
+        
+        Args:
+            user_id: Telegram User ID
+            latitude: Широта
+            longitude: Долгота
+        """
+        
+    def get_location(self, user_id: int) -> tuple[float, float] | None:
+        """
+        Получить сохраненную локацию пользователя
+        
+        Args:
+            user_id: Telegram User ID
+            
+        Returns:
+            tuple[float, float] | None: (latitude, longitude) или None если не найдено
+        """
+```
+
 ## Data Models
 
 ### Weather Data Structure
@@ -174,6 +213,34 @@ def format_weather_message(weather_data: dict) -> str:
 message.location.latitude: float
 message.location.longitude: float
 message.chat.id: int
+```
+
+### Inline Keyboard Structure
+
+Для интерактивной кнопки "Получить новый прогноз" используется `InlineKeyboardMarkup`:
+
+```python
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(
+        text="Получить новый прогноз",
+        callback_data="refresh_weather"
+    )]
+])
+```
+
+### User Location Storage Structure
+
+Хранение локаций пользователей в памяти (словарь):
+
+```python
+{
+    user_id: {
+        "latitude": float,
+        "longitude": float
+    }
+}
 ```
 
 ## Error Handling
@@ -237,12 +304,20 @@ ERROR_MESSAGES = {
    - Тест команды /start
    - Тест команды /help
    - Тест обработки геолокации (с mock Weather API)
+   - Тест обработки callback кнопки "Получить новый прогноз"
+
+2. **User Location Storage Tests**
+   - Тест сохранения локации
+   - Тест получения сохраненной локации
+   - Тест получения несуществующей локации
 
 ### Manual Testing
 
 1. Отправка геолокации и проверка ответа
 2. Проверка команд /start и /help
 3. Проверка обработки ошибок (неверные данные, недоступность API)
+4. Нажатие кнопки "Получить новый прогноз" и проверка обновления данных
+5. Нажатие кнопки без предварительной отправки локации
 
 ## Dependencies
 
