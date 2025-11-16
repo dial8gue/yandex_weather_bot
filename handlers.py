@@ -6,6 +6,7 @@ from typing import Callable, Dict, Any, Awaitable
 from aiogram import Router, BaseMiddleware, F
 from aiogram.filters import Command
 from aiogram.types import Message, TelegramObject, CallbackQuery
+from aiogram.exceptions import TelegramBadRequest
 
 from weather_api import WeatherAPIClient, WeatherAPIError
 from formatter import format_weather_message, create_refresh_keyboard
@@ -227,9 +228,16 @@ async def refresh_weather_callback(callback_query: CallbackQuery) -> None:
         keyboard = create_refresh_keyboard()
         
         # Редактируем сообщение с новым прогнозом и кнопкой
-        await callback_query.message.edit_text(weather_message, reply_markup=keyboard)
-        
-        logger.info(f"Успешно обновлен прогноз погоды для пользователя {user_id}")
+        try:
+            await callback_query.message.edit_text(weather_message, reply_markup=keyboard)
+            logger.info(f"Успешно обновлен прогноз погоды для пользователя {user_id}")
+        except TelegramBadRequest as e:
+            # Если сообщение не изменилось, просто уведомляем пользователя
+            if "message is not modified" in str(e):
+                await callback_query.answer("✅ Прогноз уже актуален", show_alert=False)
+                logger.info(f"Прогноз для пользователя {user_id} не изменился")
+            else:
+                raise
     
     except WeatherAPIError as e:
         logger.error(f"Ошибка Weather API при обновлении для пользователя {user_id}: {e}")
