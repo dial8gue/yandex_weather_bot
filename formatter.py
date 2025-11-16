@@ -117,7 +117,7 @@ def create_refresh_keyboard() -> InlineKeyboardMarkup:
     """
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text="🔄 Получить новый прогноз",
+            text="🔄 Обновить прогноз",
             callback_data="refresh_weather"
         )]
     ])
